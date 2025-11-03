@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Simple IoT Gun Control Dashboard</title>
+    <link rel="stylesheet" href="css/style.css" />
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <!-- Header -->
+    <header class="header">
+      <h1><i class="fas fa-crosshairs"></i> IoT Gun Control Dashboard</h1>
+      <div class="time" id="current-time"></div>
+    </header>
+
+    <!-- Main Dashboard -->
+    <main class="dashboard">
+      <!-- Quick Stats -->
+      <div class="stats">
+        <div class="stat-box">
+          <h3>Hunters</h3>
+          <div class="stat-number" id="hunters-count">8</div>
+        </div>
+        <div class="stat-box">
+          <h3>Shots Today</h3>
+          <div class="stat-number" id="shots-count">47</div>
+        </div>
+        <div class="stat-box">
+          <h3>Bullets</h3>
+          <div class="stat-number" id="bullets-count">1,250</div>
+        </div>
+      </div>
+
+      <!-- Sensor Data -->
+      <div class="sensors">
+        <div class="sensor">
+          <h3><i class="fas fa-volume-up"></i> Sound</h3>
+          <div class="sensor-value"><span id="sound-level">85</span> dB</div>
+          <div class="sensor-bar">
+            <div class="sensor-fill sound" id="sound-bar"></div>
+          </div>
+        </div>
+
+        <div class="sensor">
+          <h3><i class="fas fa-wave-square"></i> Vibration</h3>
+          <div class="sensor-value">
+            <span id="vibration-level">42</span> Hz
+          </div>
+          <div class="sensor-bar">
+            <div class="sensor-fill vibration" id="vibration-bar"></div>
+          </div>
+        </div>
+
+        <div class="sensor">
+          <h3><i class="fas fa-map-marker-alt"></i> Location</h3>
+          <div class="gps-coords">
+            <div>Lat: <span id="lat-coord">40.7128</span>°</div>
+            <div>Lng: <span id="lng-coord">-74.0060</span>°</div>
+          </div>
+          <div class="gps-status active">GPS Active</div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="actions">
+        <button class="action-btn" onclick="registerShot()">
+          <i class="fas fa-bullseye"></i> Record Shot
+        </button>
+        <button class="action-btn" onclick="addBullets()">
+          <i class="fas fa-plus"></i> Add Bullets
+        </button>
+        <button class="action-btn" onclick="toggleAlert()">
+          <i class="fas fa-bell"></i> Alert
+        </button>
+      </div>
+
+      <!-- Recent Activity -->
+      <div class="activity">
+        <h3>Recent Activity</h3>
+        <div class="activity-list" id="activity-list">
+          <div class="activity-item">
+            <span class="activity-time">2 min ago</span>
+            <span class="activity-desc">Shot detected - Hunter Zone A</span>
+          </div>
+          <div class="activity-item">
+            <span class="activity-time">5 min ago</span>
+            <span class="activity-desc">50 bullets added to inventory</span>
+          </div>
+          <div class="activity-item">
+            <span class="activity-time">12 min ago</span>
+            <span class="activity-desc">New hunter registered</span>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script src="js/main.js"></script>
+  </body>
+</html>
