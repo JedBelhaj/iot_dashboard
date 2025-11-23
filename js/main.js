@@ -2,12 +2,17 @@
 
 // Configuration
 const API_BASE_URL = "http://localhost:8000/api";
+const WS_BASE_URL = "ws://localhost:8000/ws";
 
 // Connection status
 let isConnected = false;
 let connectionAttempts = 0;
 let maxConnectionAttempts = 3;
 let refreshInterval = null;
+let isInitializing = false;
+
+// Simulation control
+let simulationInterval = null;
 
 // Data storage
 let dashboardData = {
@@ -32,12 +37,56 @@ document.addEventListener("DOMContentLoaded", function () {
   setInterval(updateTime, 1000);
 
   // Auto-refresh will be started after successful connection
-});
+}); // Show loading skeleton immediately
+function showLoadingState() {
+  // Update connection status
+  updateConnectionStatus("Connecting to server...");
+
+  // Update loading overlay text
+  const loadingText = document.querySelector(".loading-text");
+  if (loadingText) {
+    loadingText.textContent = "Connecting to server...";
+  }
+
+  // Show skeleton for stats
+  document.getElementById("hunters-count").textContent = "---";
+  document.getElementById("shots-count").textContent = "---";
+  document.getElementById("bullets-count").textContent = "---";
+
+  // Show loading for lists
+  document.getElementById("hunters-list").innerHTML =
+    '<div class="loading-skeleton">Loading hunters...</div>';
+  document.getElementById("ammo-inventory").innerHTML =
+    '<div class="loading-skeleton">Loading inventory...</div>';
+  document.getElementById("shots-list").innerHTML =
+    '<tr><td colspan="7" class="loading-skeleton">Loading shots...</td></tr>';
+  document.getElementById("activity-list").innerHTML =
+    '<div class="activity-item"><span class="activity-time">--:--</span><span class="activity-desc loading-skeleton">Loading activities...</span></div>';
+}
+
+// Hide loading overlay when ready
+function hideLoadingOverlay() {
+  const overlay = document.getElementById("loading-overlay");
+  if (overlay) {
+    overlay.classList.add("hidden");
+    // Remove from DOM after transition
+    setTimeout(() => {
+      overlay.style.display = "none";
+    }, 500);
+  }
+}
 
 // API Functions
 async function initializeAPI() {
+  if (isInitializing) {
+    console.log("API initialization already in progress...");
+    return;
+  }
+
   try {
+    isInitializing = true;
     connectionAttempts++;
+    console.log(`Initializing API (attempt ${connectionAttempts})...`);
     await fetchDashboardStats();
     await fetchHunters();
     await fetchGuns();
@@ -48,17 +97,23 @@ async function initializeAPI() {
     // Successfully connected
     isConnected = true;
     connectionAttempts = 0;
+    isInitializing = false;
     updateConnectionStatus("Connected to backend server");
     startAutoRefresh();
   } catch (error) {
     console.error("Failed to initialize API:", error);
     isConnected = false;
+    isInitializing = false;
 
     if (connectionAttempts <= maxConnectionAttempts) {
       updateConnectionStatus(
         `Connection failed (${connectionAttempts}/${maxConnectionAttempts}). Retrying...`
       );
-      setTimeout(() => initializeAPI(), 5000); // Retry in 5 seconds
+      setTimeout(() => {
+        if (!isConnected && !isInitializing) {
+          initializeAPI();
+        }
+      }, 5000); // Retry in 5 seconds
     } else {
       updateConnectionStatus(
         "Backend server offline. Working in offline mode."
@@ -110,11 +165,11 @@ async function fetchRecentShots() {
 
 async function fetchAmmunition() {
   try {
-    const response = await fetch(`${API_BASE_URL}/ammunition/inventory/`);
+    const response = await fetch(`${API_BASE_URL}/ammunition/ammunition/`);
     if (response.ok) {
       const data = await response.json();
-      dashboardData.ammunition = data.results || data;
-      updateAmmunitionList();
+      dashboardData.ammo = data.results || data;
+      updateAmmoInventory();
     }
   } catch (error) {
     console.error("Error fetching ammunition:", error);
@@ -156,12 +211,18 @@ function updateTime() {
 
 function updateStatsDisplay() {
   const stats = dashboardData.stats;
-  document.getElementById("hunters-count").textContent =
-    stats.active_hunters || 0;
-  document.getElementById("shots-count").textContent = stats.total_shots || 0;
-  document.getElementById("bullets-count").textContent = (
-    stats.total_bullets || 0
-  ).toLocaleString();
+  const huntersEl = document.getElementById("hunters-count");
+  const shotsEl = document.getElementById("shots-count");
+  const bulletsEl = document.getElementById("bullets-count");
+
+  huntersEl.textContent = stats.active_hunters || 0;
+
+  // Use live shot count from our data array
+  shotsEl.textContent = dashboardData.shots
+    ? dashboardData.shots.length
+    : stats.total_shots || 0;
+
+  bulletsEl.textContent = (stats.total_bullets || 0).toLocaleString();
 }
 
 function updateHuntersList() {
@@ -553,10 +614,17 @@ function setupFormHandlers() {
 
 // Connection Management
 function startAutoRefresh() {
-  if (refreshInterval) clearInterval(refreshInterval);
-  if (isConnected) {
+  // Always clear existing interval first
+  if (refreshInterval) {
+    clearInterval(refreshInterval);
+    refreshInterval = null;
+  }
+
+  if (isConnected && !refreshInterval) {
+    console.log("Starting auto-refresh (5 minute interval)");
     refreshInterval = setInterval(() => {
-      if (isConnected) {
+      if (isConnected && !isInitializing) {
+        console.log("Auto-refreshing data...");
         refreshData();
       }
     }, 300000); // Refresh every 5 minutes
@@ -586,6 +654,107 @@ function updateLastRefreshTime() {
   const now = new Date();
   const timeString = now.toLocaleTimeString();
   console.log(`Last refresh: ${timeString}`);
+}
+
+// WebSocket Functions
+function connectWebSocket() {
+  // Don't create multiple connections
+  if (
+    shotSocket &&
+    (shotSocket.readyState === WebSocket.CONNECTING ||
+      shotSocket.readyState === WebSocket.OPEN)
+  ) {
+    console.log("WebSocket already connected or connecting");
+    return;
+  }
+
+  try {
+    console.log("Connecting to WebSocket...");
+    shotSocket = new WebSocket(`${WS_BASE_URL}/shots/`);
+
+    shotSocket.onopen = function (event) {
+      console.log("🔗 WebSocket connected for real-time shots");
+      isWebSocketConnected = true;
+      updateConnectionStatus("Connected to server with real-time updates");
+    };
+
+    shotSocket.onmessage = function (event) {
+      const data = JSON.parse(event.data);
+
+      if (data.type === "new_shot") {
+        handleNewShot(data.shot);
+      }
+    };
+
+    shotSocket.onclose = function (event) {
+      console.log("🔌 WebSocket disconnected");
+      isWebSocketConnected = false;
+      updateConnectionStatus("Real-time updates disconnected");
+
+      // Attempt to reconnect after 5 seconds
+      setTimeout(connectWebSocket, 5000);
+    };
+
+    shotSocket.onerror = function (error) {
+      console.error("❌ WebSocket error:", error);
+    };
+  } catch (error) {
+    console.error("Failed to connect WebSocket:", error);
+  }
+}
+
+function handleNewShot(shot) {
+  console.log("🎯 New shot received:", shot);
+
+  // Add to shots array at the beginning (newest first)
+  dashboardData.shots.unshift(shot);
+
+  // Also add to filtered shots if it matches current filters
+  if (shotMatchesCurrentFilters(shot)) {
+    filteredShots.unshift(shot);
+  }
+
+  // Update displays
+  renderShotsTable();
+  updateStatsDisplay();
+
+  // Show notification
+  showSuccess(`New shot recorded: ${shot.hunter_name} (${shot.weapon_used})`);
+
+  // Flash the new row
+  setTimeout(() => {
+    const rows = document.querySelectorAll(".shot-row");
+    if (rows.length > 0) {
+      rows[0].style.backgroundColor = "#e8f5e8";
+      setTimeout(() => {
+        rows[0].style.backgroundColor = "";
+      }, 2000);
+    }
+  }, 100);
+}
+
+function shotMatchesCurrentFilters(shot) {
+  const hunterFilter = document.getElementById("hunterFilter").value;
+  const weaponFilter = document.getElementById("weaponFilter").value;
+  const locationFilter = document.getElementById("locationFilter").value;
+  const dateFilter = document.getElementById("dateFilter").value;
+
+  // Hunter filter
+  if (hunterFilter && shot.hunter_name !== hunterFilter) return false;
+
+  // Weapon filter
+  if (weaponFilter && shot.weapon_used !== weaponFilter) return false;
+
+  // Location filter
+  if (locationFilter && shot.location !== locationFilter) return false;
+
+  // Date filter
+  if (dateFilter) {
+    const shotDate = new Date(shot.timestamp).toISOString().split("T")[0];
+    if (shotDate !== dateFilter) return false;
+  }
+
+  return true;
 }
 
 function loadOfflineData() {
@@ -646,9 +815,136 @@ window.onclick = function (event) {
 };
 
 function retryConnection() {
+  if (isInitializing) {
+    console.log("Connection attempt already in progress");
+    return;
+  }
+
   connectionAttempts = 0;
+  isInitializing = false;
+  stopAutoRefresh();
   updateConnectionStatus("Retrying connection...");
   initializeAPI();
+}
+
+// Simulation control
+let simulationActive = false;
+
+function toggleSimulation() {
+  const btn = document.getElementById("simulationBtn");
+  const text = document.getElementById("simulationText");
+  const icon = btn.querySelector("i");
+
+  if (simulationActive) {
+    // Stop simulation
+    stopSimulation();
+  } else {
+    // Start simulation
+    startSimulation();
+  }
+}
+
+function startSimulation() {
+  const btn = document.getElementById("simulationBtn");
+  const text = document.getElementById("simulationText");
+  const icon = btn.querySelector("i");
+
+  simulationActive = true;
+  text.textContent = "Stop Simulation";
+  icon.className = "fas fa-stop";
+  btn.style.backgroundColor = "#f44336";
+  showSuccess("Shot simulation started - New shots every 10 seconds!");
+
+  // Start the simulation loop
+  simulateShot();
+}
+
+function stopSimulation() {
+  const btn = document.getElementById("simulationBtn");
+  const text = document.getElementById("simulationText");
+  const icon = btn.querySelector("i");
+
+  simulationActive = false;
+  text.textContent = "Start Simulation";
+  icon.className = "fas fa-play";
+  btn.style.backgroundColor = "#4CAF50";
+  showSuccess("Shot simulation stopped");
+}
+
+async function simulateShot() {
+  if (!simulationActive) return;
+
+  try {
+    // Create a simulated shot via API
+    const response = await fetch(`${API_BASE_URL}/hunters/shots/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(await generateRandomShotData()),
+    });
+
+    if (response.ok) {
+      const newShot = await response.json();
+      console.log("🎯 Simulated shot created:", newShot);
+
+      // Add to local data and update display
+      dashboardData.shots.unshift(newShot);
+      if (shotMatchesCurrentFilters(newShot)) {
+        filteredShots.unshift(newShot);
+      }
+
+      // Update displays
+      renderShotsTable();
+      updateStatsDisplay();
+
+      // Flash the new row
+      setTimeout(() => {
+        const rows = document.querySelectorAll(".shot-row");
+        if (rows.length > 0) {
+          rows[0].style.backgroundColor = "#e8f5e8";
+          setTimeout(() => {
+            rows[0].style.backgroundColor = "";
+          }, 2000);
+        }
+      }, 100);
+    }
+  } catch (error) {
+    console.error("Failed to create simulated shot:", error);
+  }
+
+  // Schedule next shot if simulation is still active
+  if (simulationActive) {
+    setTimeout(simulateShot, 10000); // 10 seconds
+  }
+}
+
+async function generateRandomShotData() {
+  // Get available guns
+  try {
+    const response = await fetch(`${API_BASE_URL}/hunters/guns/`);
+    const data = await response.json();
+    const guns = data.results || data;
+    const activeGuns = guns.filter((gun) => gun.status === "active");
+
+    if (activeGuns.length === 0) {
+      throw new Error("No active guns available for simulation");
+    }
+
+    const randomGun = activeGuns[Math.floor(Math.random() * activeGuns.length)];
+
+    return {
+      gun: randomGun.id,
+      sound_level: 85 + Math.random() * 35, // 85-120 dB
+      vibration_level: 40 + Math.random() * 40, // 40-80 Hz
+      latitude: 40.7128 + (Math.random() - 0.5) * 0.02,
+      longitude: -74.006 + (Math.random() - 0.5) * 0.02,
+      notes: "Auto-simulated shot",
+    };
+  } catch (error) {
+    console.error("Error generating shot data:", error);
+    return null;
+  }
 }
 
 window.showAddHunter = showAddHunter;
@@ -657,3 +953,4 @@ window.showAddAmmo = showAddAmmo;
 window.closeModal = closeModal;
 window.refreshData = refreshData;
 window.retryConnection = retryConnection;
+window.toggleSimulation = toggleSimulation;

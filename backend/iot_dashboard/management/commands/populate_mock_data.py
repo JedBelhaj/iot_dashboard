@@ -5,7 +5,7 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 from datetime import timedelta
 import random
-from hunters.models import Hunter, Shot
+from hunters.models import Hunter, Gun, Shot
 from sensors.models import SensorReading, SensorDevice
 from ammunition.models import Ammunition, AmmunitionTransaction
 from activities.models import Activity, SystemAlert
@@ -24,6 +24,9 @@ class Command(BaseCommand):
         
         # Create hunters
         self.create_hunters(options['hunters'])
+        
+        # Create guns for hunters
+        self.create_guns()
         
         # Create sensor devices
         self.create_sensor_devices()
@@ -53,14 +56,12 @@ class Command(BaseCommand):
             'Chris Martinez', 'Amanda Garcia', 'Ryan Rodriguez', 'Nicole Lewis'
         ]
         
-        weapon_types = ['rifle', 'shotgun', 'handgun', 'bow']
         locations = ['Hunting Zone A', 'Training Range B', 'Forest Reserve C', 'Mountain Area D']
         
         for i in range(count):
             Hunter.objects.create(
                 name=random.choice(names),
                 license_number=f"HNT-2025-{str(i+1).zfill(3)}",
-                weapon_type=random.choice(weapon_types),
                 current_location=random.choice(locations),
                 is_active=random.choice([True, True, True, False]),  # 75% active
                 latitude=40.7128 + random.uniform(-0.01, 0.01),
@@ -71,6 +72,41 @@ class Command(BaseCommand):
             )
         
         self.stdout.write(f'Created {count} hunters')
+
+    def create_guns(self):
+        """Create guns for hunters"""
+        hunters = list(Hunter.objects.all())
+        
+        weapon_data = [
+            {'make': 'Remington', 'model': '700', 'caliber': '.308', 'weapon_type': 'rifle'},
+            {'make': 'Winchester', 'model': 'SXP', 'caliber': '12ga', 'weapon_type': 'shotgun'},
+            {'make': 'Glock', 'model': '19', 'caliber': '9mm', 'weapon_type': 'handgun'},
+            {'make': 'Smith & Wesson', 'model': 'M&P15', 'caliber': '.223', 'weapon_type': 'rifle'},
+            {'make': 'Mossberg', 'model': '500', 'caliber': '12ga', 'weapon_type': 'shotgun'},
+            {'make': 'Hoyt', 'model': 'Carbon RX-7', 'caliber': 'Compound', 'weapon_type': 'bow'},
+        ]
+        
+        gun_count = 0
+        for hunter in hunters:
+            # Each active hunter gets 1-2 guns
+            num_guns = random.randint(1, 2) if hunter.is_active else random.randint(0, 1)
+            
+            for i in range(num_guns):
+                weapon = random.choice(weapon_data)
+                gun_count += 1
+                
+                Gun.objects.create(
+                    device_id=f"IOT_{hunter.license_number}_{i+1}",
+                    serial_number=f"SN{gun_count:06d}",
+                    owner=hunter,
+                    status=random.choice(['active', 'active', 'active', 'maintenance']),
+                    battery_level=random.randint(20, 100),
+                    firmware_version=f"1.{random.randint(0, 5)}.{random.randint(0, 9)}",
+                    last_sync=timezone.now() - timedelta(minutes=random.randint(0, 120)),
+                    **weapon
+                )
+        
+        self.stdout.write(f'Created {gun_count} guns')
 
     def create_sensor_devices(self):
         """Create sensor devices"""
@@ -187,21 +223,21 @@ class Command(BaseCommand):
 
     def create_shots(self, count):
         """Create shot records"""
-        hunters = list(Hunter.objects.all())
-        weapon_types = ['rifle', 'shotgun', 'handgun', 'bow']
-        locations = ['Hunting Zone A', 'Training Range B', 'Forest Reserve C']
+        guns = list(Gun.objects.filter(status='active'))
+        
+        if not guns:
+            self.stdout.write('No active guns found, skipping shot creation')
+            return
         
         for _ in range(count):
-            hunter = random.choice(hunters)
+            gun = random.choice(guns)
             
             Shot.objects.create(
-                hunter=hunter,
-                location=random.choice(locations),
+                gun=gun,
                 sound_level=random.uniform(85, 120),
                 vibration_level=random.uniform(30, 80),
-                latitude=40.7128 + random.uniform(-0.01, 0.01),
-                longitude=-74.0060 + random.uniform(-0.01, 0.01),
-                weapon_used=random.choice(weapon_types),
+                latitude=gun.owner.latitude + random.uniform(-0.01, 0.01) if gun.owner.latitude else 40.7128 + random.uniform(-0.01, 0.01),
+                longitude=gun.owner.longitude + random.uniform(-0.01, 0.01) if gun.owner.longitude else -74.0060 + random.uniform(-0.01, 0.01),
                 notes=random.choice([
                     'Clean shot, good conditions',
                     'Target practice session',
