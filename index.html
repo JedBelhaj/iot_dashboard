@@ -188,16 +188,7 @@
               required
             />
           </div>
-          <div class="form-group">
-            <label for="weaponType">Weapon Type:</label>
-            <select id="weaponType" name="weapon_type" required>
-              <option value="">Select weapon</option>
-              <option value="rifle">Rifle</option>
-              <option value="shotgun">Shotgun</option>
-              <option value="handgun">Handgun</option>
-              <option value="bow">Bow</option>
-            </select>
-          </div>
+
           <div class="form-group">
             <label for="currentLocation">Current Location:</label>
             <input
@@ -226,14 +217,10 @@
         <h2>Record Shot</h2>
         <form id="shotForm">
           <div class="form-group">
-            <label for="shotHunter">Hunter:</label>
-            <select id="shotHunter" name="hunter" required>
-              <option value="">Select hunter</option>
+            <label for="shotGun">Gun/Device:</label>
+            <select id="shotGun" name="gun" required>
+              <option value="">Select gun</option>
             </select>
-          </div>
-          <div class="form-group">
-            <label for="shotLocation">Location:</label>
-            <input type="text" id="shotLocation" name="location" required />
           </div>
           <div class="form-group">
             <label for="soundLevel">Sound Level (dB):</label>
@@ -258,14 +245,24 @@
             />
           </div>
           <div class="form-group">
-            <label for="shotWeapon">Weapon Used:</label>
-            <select id="shotWeapon" name="weapon_used" required>
-              <option value="">Select weapon</option>
-              <option value="rifle">Rifle</option>
-              <option value="shotgun">Shotgun</option>
-              <option value="handgun">Handgun</option>
-              <option value="bow">Bow</option>
-            </select>
+            <label for="latitude">Latitude:</label>
+            <input
+              type="number"
+              id="latitude"
+              name="latitude"
+              step="0.000001"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="longitude">Longitude:</label>
+            <input
+              type="number"
+              id="longitude"
+              name="longitude"
+              step="0.000001"
+              required
+            />
           </div>
           <div class="form-group">
             <label for="shotNotes">Notes:</label>

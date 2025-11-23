@@ -7,6 +7,7 @@ from . import views
 
 router = DefaultRouter()
 router.register(r'hunters', views.HunterViewSet)
+router.register(r'guns', views.GunViewSet)
 router.register(r'shots', views.ShotViewSet)
 
 urlpatterns = [

@@ -31,8 +31,7 @@ document.addEventListener("DOMContentLoaded", function () {
   // Update time every second
   setInterval(updateTime, 1000);
 
-  // Start refresh interval only if connected
-  startAutoRefresh();
+  // Auto-refresh will be started after successful connection
 });
 
 // API Functions
@@ -41,6 +40,7 @@ async function initializeAPI() {
     connectionAttempts++;
     await fetchDashboardStats();
     await fetchHunters();
+    await fetchGuns();
     await fetchRecentShots();
     await fetchAmmunition();
     await fetchRecentActivities();
@@ -135,6 +135,18 @@ async function fetchRecentActivities() {
   }
 }
 
+async function fetchGuns() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/hunters/guns/`);
+    if (response.ok) {
+      const data = await response.json();
+      dashboardData.guns = data.results || data;
+    }
+  } catch (error) {
+    console.error("Error fetching guns:", error);
+  }
+}
+
 // Update Display Functions
 function updateTime() {
   const now = new Date();
@@ -168,7 +180,7 @@ function updateHuntersList() {
       <h4>${hunter.name}</h4>
       <div class="item-details">
         License: ${hunter.license_number}<br>
-        Weapon: ${hunter.weapon_type}<br>
+        Guns: ${hunter.total_guns || 0}<br>
         Location: ${hunter.current_location}
       </div>
       <span class="item-status ${
@@ -456,18 +468,28 @@ function closeModal(modalId) {
   if (form) form.reset();
 }
 
-function loadHuntersForShotForm() {
-  const hunterSelect = document.getElementById("shotHunter");
-  hunterSelect.innerHTML = '<option value="">Select hunter</option>';
+async function loadHuntersForShotForm() {
+  const gunSelect = document.getElementById("shotGun");
+  gunSelect.innerHTML = '<option value="">Select gun</option>';
 
-  dashboardData.hunters.forEach((hunter) => {
-    if (hunter.is_active) {
-      const option = document.createElement("option");
-      option.value = hunter.id;
-      option.textContent = `${hunter.name} (${hunter.license_number})`;
-      hunterSelect.appendChild(option);
+  try {
+    const response = await fetch(`${API_BASE_URL}/hunters/guns/`);
+    if (response.ok) {
+      const data = await response.json();
+      const guns = data.results || data;
+
+      guns.forEach((gun) => {
+        if (gun.status === "active") {
+          const option = document.createElement("option");
+          option.value = gun.id;
+          option.textContent = `${gun.owner_name}: ${gun.make} ${gun.model} (${gun.device_id})`;
+          gunSelect.appendChild(option);
+        }
+      });
     }
-  });
+  } catch (error) {
+    console.error("Error fetching guns:", error);
+  }
 }
 
 // Form Handlers
@@ -492,7 +514,6 @@ function setupFormHandlers() {
           closeModal("addHunterModal");
           showSuccess("Hunter added successfully!");
           await fetchHunters();
-          await fetchDashboardStats();
         } else {
           const error = await response.json();
           showError(`Error: ${JSON.stringify(error)}`);
@@ -501,6 +522,33 @@ function setupFormHandlers() {
         showError("Failed to add hunter. Please try again.");
       }
     });
+
+  document.getElementById("shotForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const shotData = Object.fromEntries(formData);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/hunters/shots/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(shotData),
+      });
+
+      if (response.ok) {
+        closeModal("recordShotModal");
+        showSuccess("Shot recorded successfully!");
+        await fetchRecentShots();
+      } else {
+        const error = await response.json();
+        showError(`Error: ${JSON.stringify(error)}`);
+      }
+    } catch (error) {
+      showError("Failed to record shot. Please try again.");
+    }
+  });
 }
 
 // Connection Management
@@ -511,7 +559,7 @@ function startAutoRefresh() {
       if (isConnected) {
         refreshData();
       }
-    }, 60000); // Refresh every 60 seconds instead of 30
+    }, 300000); // Refresh every 5 minutes
   }
 }
 
@@ -534,6 +582,12 @@ function updateConnectionStatus(message) {
   }
 }
 
+function updateLastRefreshTime() {
+  const now = new Date();
+  const timeString = now.toLocaleTimeString();
+  console.log(`Last refresh: ${timeString}`);
+}
+
 function loadOfflineData() {
   // Display placeholder/offline data
   dashboardData.stats = { active_hunters: 0, total_shots: 0, total_bullets: 0 };
@@ -552,7 +606,12 @@ function loadOfflineData() {
 // Utility Functions
 function refreshData() {
   if (isConnected) {
-    initializeAPI();
+    // Only refresh key data, not full initialization
+    console.log("Auto-refreshing dashboard data...");
+    fetchDashboardStats();
+    fetchRecentShots();
+    fetchRecentActivities();
+    updateLastRefreshTime();
   }
 }
 
