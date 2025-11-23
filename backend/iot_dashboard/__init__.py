@@ -1,0 +1,3 @@
+"""
+Django IoT Dashboard Project
+"""

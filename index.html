@@ -14,7 +14,10 @@
     <!-- Header -->
     <header class="header">
       <h1><i class="fas fa-crosshairs"></i> IoT Gun Control Dashboard</h1>
-      <div class="time" id="current-time"></div>
+      <div class="header-info">
+        <div class="connection-status disconnected">Connecting...</div>
+        <div class="time" id="current-time"></div>
+      </div>
     </header>
 
     <!-- Main Dashboard -->
@@ -35,68 +38,306 @@
         </div>
       </div>
 
-      <!-- Sensor Data -->
-      <div class="sensors">
-        <div class="sensor">
-          <h3><i class="fas fa-volume-up"></i> Sound</h3>
-          <div class="sensor-value"><span id="sound-level">85</span> dB</div>
-          <div class="sensor-bar">
-            <div class="sensor-fill sound" id="sound-bar"></div>
+      <!-- Data Views -->
+      <div class="data-views">
+        <!-- Hunters View -->
+        <div class="data-section">
+          <h3><i class="fas fa-users"></i> Active Hunters</h3>
+          <div class="hunters-list" id="hunters-list">
+            <div class="loading">Loading hunters...</div>
           </div>
+          <button class="add-btn" onclick="showAddHunter()">
+            <i class="fas fa-plus"></i> Add Hunter
+          </button>
         </div>
 
-        <div class="sensor">
-          <h3><i class="fas fa-wave-square"></i> Vibration</h3>
-          <div class="sensor-value">
-            <span id="vibration-level">42</span> Hz
+        <!-- Ammunition Inventory -->
+        <div class="data-section">
+          <h3><i class="fas fa-boxes"></i> Ammunition Inventory</h3>
+          <div class="ammo-inventory" id="ammo-inventory">
+            <div class="loading">Loading inventory...</div>
           </div>
-          <div class="sensor-bar">
-            <div class="sensor-fill vibration" id="vibration-bar"></div>
-          </div>
-        </div>
-
-        <div class="sensor">
-          <h3><i class="fas fa-map-marker-alt"></i> Location</h3>
-          <div class="gps-coords">
-            <div>Lat: <span id="lat-coord">40.7128</span>°</div>
-            <div>Lng: <span id="lng-coord">-74.0060</span>°</div>
-          </div>
-          <div class="gps-status active">GPS Active</div>
+          <button class="add-btn" onclick="showAddAmmo()">
+            <i class="fas fa-plus"></i> Add Stock
+          </button>
         </div>
       </div>
 
       <!-- Quick Actions -->
       <div class="actions">
-        <button class="action-btn" onclick="registerShot()">
+        <button class="action-btn" onclick="showAddHunter()">
+          <i class="fas fa-user-plus"></i> Add Hunter
+        </button>
+        <button class="action-btn" onclick="showRecordShot()">
           <i class="fas fa-bullseye"></i> Record Shot
         </button>
-        <button class="action-btn" onclick="addBullets()">
-          <i class="fas fa-plus"></i> Add Bullets
+        <button class="action-btn" onclick="showAddAmmo()">
+          <i class="fas fa-boxes"></i> Add Ammo
         </button>
-        <button class="action-btn" onclick="toggleAlert()">
-          <i class="fas fa-bell"></i> Alert
+        <button class="action-btn" onclick="retryConnection()">
+          <i class="fas fa-wifi"></i> Retry Connection
+        </button>
+        <button class="action-btn" onclick="refreshData()">
+          <i class="fas fa-sync-alt"></i> Refresh
         </button>
       </div>
 
-      <!-- Recent Activity -->
-      <div class="activity">
-        <h3>Recent Activity</h3>
-        <div class="activity-list" id="activity-list">
-          <div class="activity-item">
-            <span class="activity-time">2 min ago</span>
-            <span class="activity-desc">Shot detected - Hunter Zone A</span>
+      <!-- Shots Table with Filters -->
+      <div class="shots-section">
+        <h3><i class="fas fa-bullseye"></i> Shot Records</h3>
+
+        <!-- Filters -->
+        <div class="filters">
+          <div class="filter-row">
+            <div class="filter-group">
+              <label for="hunterFilter">Hunter:</label>
+              <select id="hunterFilter" onchange="filterShots()">
+                <option value="">All Hunters</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <label for="weaponFilter">Weapon:</label>
+              <select id="weaponFilter" onchange="filterShots()">
+                <option value="">All Weapons</option>
+                <option value="rifle">Rifle</option>
+                <option value="shotgun">Shotgun</option>
+                <option value="handgun">Handgun</option>
+                <option value="bow">Bow</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <label for="locationFilter">Location:</label>
+              <select id="locationFilter" onchange="filterShots()">
+                <option value="">All Locations</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <label for="dateFilter">Date:</label>
+              <input type="date" id="dateFilter" onchange="filterShots()" />
+            </div>
+            <div class="filter-group">
+              <button class="clear-filters" onclick="clearFilters()">
+                Clear Filters
+              </button>
+            </div>
           </div>
-          <div class="activity-item">
-            <span class="activity-time">5 min ago</span>
-            <span class="activity-desc">50 bullets added to inventory</span>
-          </div>
-          <div class="activity-item">
-            <span class="activity-time">12 min ago</span>
-            <span class="activity-desc">New hunter registered</span>
-          </div>
+        </div>
+
+        <!-- Table -->
+        <div class="table-container">
+          <table class="shots-table" id="shots-table">
+            <thead>
+              <tr>
+                <th class="sortable" onclick="sortTable('hunter')">
+                  Hunter <span class="sort-arrow" id="sort-hunter"></span>
+                </th>
+                <th class="sortable" onclick="sortTable('timestamp')">
+                  Timestamp <span class="sort-arrow" id="sort-timestamp"></span>
+                </th>
+                <th class="sortable" onclick="sortTable('location')">
+                  Location <span class="sort-arrow" id="sort-location"></span>
+                </th>
+                <th class="sortable" onclick="sortTable('weapon')">
+                  Weapon <span class="sort-arrow" id="sort-weapon"></span>
+                </th>
+                <th class="sortable" onclick="sortTable('sound')">
+                  Sound Level <span class="sort-arrow" id="sort-sound"></span>
+                </th>
+                <th class="sortable" onclick="sortTable('vibration')">
+                  Vibration <span class="sort-arrow" id="sort-vibration"></span>
+                </th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody id="shots-list">
+              <tr>
+                <td colspan="7" class="loading">Loading shots...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="table-info">
+          <span id="shots-count">0 shots</span>
+          <button class="add-btn" onclick="showRecordShot()">
+            <i class="fas fa-plus"></i> Record Shot
+          </button>
         </div>
       </div>
     </main>
+
+    <!-- Modals -->
+    <!-- Add Hunter Modal -->
+    <div id="addHunterModal" class="modal">
+      <div class="modal-content">
+        <span class="close" onclick="closeModal('addHunterModal')"
+          >&times;</span
+        >
+        <h2>Add New Hunter</h2>
+        <form id="hunterForm">
+          <div class="form-group">
+            <label for="hunterName">Name:</label>
+            <input type="text" id="hunterName" name="name" required />
+          </div>
+          <div class="form-group">
+            <label for="licenseNumber">License Number:</label>
+            <input
+              type="text"
+              id="licenseNumber"
+              name="license_number"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="weaponType">Weapon Type:</label>
+            <select id="weaponType" name="weapon_type" required>
+              <option value="">Select weapon</option>
+              <option value="rifle">Rifle</option>
+              <option value="shotgun">Shotgun</option>
+              <option value="handgun">Handgun</option>
+              <option value="bow">Bow</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="currentLocation">Current Location:</label>
+            <input
+              type="text"
+              id="currentLocation"
+              name="current_location"
+              required
+            />
+          </div>
+          <div class="form-actions">
+            <button type="button" onclick="closeModal('addHunterModal')">
+              Cancel
+            </button>
+            <button type="submit">Add Hunter</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Record Shot Modal -->
+    <div id="recordShotModal" class="modal">
+      <div class="modal-content">
+        <span class="close" onclick="closeModal('recordShotModal')"
+          >&times;</span
+        >
+        <h2>Record Shot</h2>
+        <form id="shotForm">
+          <div class="form-group">
+            <label for="shotHunter">Hunter:</label>
+            <select id="shotHunter" name="hunter" required>
+              <option value="">Select hunter</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="shotLocation">Location:</label>
+            <input type="text" id="shotLocation" name="location" required />
+          </div>
+          <div class="form-group">
+            <label for="soundLevel">Sound Level (dB):</label>
+            <input
+              type="number"
+              id="soundLevel"
+              name="sound_level"
+              min="0"
+              max="200"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="vibrationLevel">Vibration Level (Hz):</label>
+            <input
+              type="number"
+              id="vibrationLevel"
+              name="vibration_level"
+              min="0"
+              max="100"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="shotWeapon">Weapon Used:</label>
+            <select id="shotWeapon" name="weapon_used" required>
+              <option value="">Select weapon</option>
+              <option value="rifle">Rifle</option>
+              <option value="shotgun">Shotgun</option>
+              <option value="handgun">Handgun</option>
+              <option value="bow">Bow</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="shotNotes">Notes:</label>
+            <textarea id="shotNotes" name="notes" rows="3"></textarea>
+          </div>
+          <div class="form-actions">
+            <button type="button" onclick="closeModal('recordShotModal')">
+              Cancel
+            </button>
+            <button type="submit">Record Shot</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Add Ammunition Modal -->
+    <div id="addAmmoModal" class="modal">
+      <div class="modal-content">
+        <span class="close" onclick="closeModal('addAmmoModal')">&times;</span>
+        <h2>Add Ammunition</h2>
+        <form id="ammoForm">
+          <div class="form-group">
+            <label for="ammoType">Ammunition Type:</label>
+            <select id="ammoType" name="ammo_type" required>
+              <option value="">Select type</option>
+              <option value="308">.308 Winchester</option>
+              <option value="12g">12 Gauge</option>
+              <option value="9mm">9mm Parabellum</option>
+              <option value="22lr">.22 LR</option>
+              <option value="223">.223 Remington</option>
+              <option value="30-06">.30-06 Springfield</option>
+              <option value="45acp">.45 ACP</option>
+              <option value="270">.270 Winchester</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="ammoQuantity">Quantity:</label>
+            <input
+              type="number"
+              id="ammoQuantity"
+              name="quantity"
+              min="1"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="ammoLocation">Storage Location:</label>
+            <input type="text" id="ammoLocation" name="location" required />
+          </div>
+          <div class="form-group">
+            <label for="costPerUnit">Cost Per Unit ($):</label>
+            <input
+              type="number"
+              id="costPerUnit"
+              name="cost_per_unit"
+              step="0.01"
+              min="0"
+            />
+          </div>
+          <div class="form-group">
+            <label for="supplier">Supplier:</label>
+            <input type="text" id="supplier" name="supplier" />
+          </div>
+          <div class="form-actions">
+            <button type="button" onclick="closeModal('addAmmoModal')">
+              Cancel
+            </button>
+            <button type="submit">Add Ammunition</button>
+          </div>
+        </form>
+      </div>
+    </div>
 
     <script src="js/main.js"></script>
   </body>

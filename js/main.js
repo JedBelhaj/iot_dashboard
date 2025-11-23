@@ -1,175 +1,600 @@
-// Simple IoT Dashboard JavaScript
+﻿// IoT Dashboard JavaScript with Django API Integration for Backend Data
 
-// Data
-let data = {
-  hunters: 8,
-  shots: 47,
-  bullets: 1250,
-  sound: 85,
-  vibration: 42,
-  lat: 40.7128,
-  lng: -74.006,
+// Configuration
+const API_BASE_URL = "http://localhost:8000/api";
+
+// Connection status
+let isConnected = false;
+let connectionAttempts = 0;
+let maxConnectionAttempts = 3;
+let refreshInterval = null;
+
+// Data storage
+let dashboardData = {
+  hunters: [],
+  shots: [],
+  ammunition: [],
+  activities: [],
+  stats: {
+    active_hunters: 0,
+    total_shots: 0,
+    total_bullets: 0,
+  },
 };
 
 // Initialize dashboard when page loads
 document.addEventListener("DOMContentLoaded", function () {
   updateTime();
-  updateStats();
-  updateSensors();
+  initializeAPI();
+  setupFormHandlers();
 
   // Update time every second
   setInterval(updateTime, 1000);
 
-  // Update sensors every 3 seconds
-  setInterval(updateSensors, 3000);
+  // Start refresh interval only if connected
+  startAutoRefresh();
 });
 
-// Update current time
+// API Functions
+async function initializeAPI() {
+  try {
+    connectionAttempts++;
+    await fetchDashboardStats();
+    await fetchHunters();
+    await fetchRecentShots();
+    await fetchAmmunition();
+    await fetchRecentActivities();
+
+    // Successfully connected
+    isConnected = true;
+    connectionAttempts = 0;
+    updateConnectionStatus("Connected to backend server");
+    startAutoRefresh();
+  } catch (error) {
+    console.error("Failed to initialize API:", error);
+    isConnected = false;
+
+    if (connectionAttempts <= maxConnectionAttempts) {
+      updateConnectionStatus(
+        `Connection failed (${connectionAttempts}/${maxConnectionAttempts}). Retrying...`
+      );
+      setTimeout(() => initializeAPI(), 5000); // Retry in 5 seconds
+    } else {
+      updateConnectionStatus(
+        "Backend server offline. Working in offline mode."
+      );
+      stopAutoRefresh();
+      loadOfflineData();
+    }
+  }
+}
+
+async function fetchDashboardStats() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/dashboard-stats/`);
+    if (response.ok) {
+      dashboardData.stats = await response.json();
+      updateStatsDisplay();
+    }
+  } catch (error) {
+    console.error("Error fetching dashboard stats:", error);
+  }
+}
+
+async function fetchHunters() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/hunters/hunters/`);
+    if (response.ok) {
+      const data = await response.json();
+      dashboardData.hunters = data.results || data;
+      updateHuntersList();
+    }
+  } catch (error) {
+    console.error("Error fetching hunters:", error);
+  }
+}
+
+async function fetchRecentShots() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/hunters/shots/recent/`);
+    if (response.ok) {
+      dashboardData.shots = await response.json();
+      // Initialize filtered shots with all shots
+      filteredShots = [...dashboardData.shots];
+      updateShotsList();
+    }
+  } catch (error) {
+    console.error("Error fetching shots:", error);
+  }
+}
+
+async function fetchAmmunition() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/ammunition/inventory/`);
+    if (response.ok) {
+      const data = await response.json();
+      dashboardData.ammunition = data.results || data;
+      updateAmmunitionList();
+    }
+  } catch (error) {
+    console.error("Error fetching ammunition:", error);
+  }
+}
+
+async function fetchRecentActivities() {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/activities/activities/recent/`
+    );
+    if (response.ok) {
+      dashboardData.activities = await response.json();
+      updateActivityList();
+    }
+  } catch (error) {
+    console.error("Error fetching activities:", error);
+  }
+}
+
+// Update Display Functions
 function updateTime() {
   const now = new Date();
-  const timeString = now.toLocaleTimeString();
-  document.getElementById("current-time").textContent = timeString;
+  document.getElementById("current-time").textContent =
+    now.toLocaleTimeString();
 }
 
-// Update statistics
-function updateStats() {
-  document.getElementById("hunters-count").textContent = data.hunters;
-  document.getElementById("shots-count").textContent = data.shots;
-  document.getElementById("bullets-count").textContent =
-    data.bullets.toLocaleString();
+function updateStatsDisplay() {
+  const stats = dashboardData.stats;
+  document.getElementById("hunters-count").textContent =
+    stats.active_hunters || 0;
+  document.getElementById("shots-count").textContent = stats.total_shots || 0;
+  document.getElementById("bullets-count").textContent = (
+    stats.total_bullets || 0
+  ).toLocaleString();
 }
 
-// Update sensor data
-function updateSensors() {
-  // Simulate sensor fluctuations
-  data.sound = Math.max(
-    30,
-    Math.min(120, data.sound + (Math.random() - 0.5) * 10)
-  );
-  data.vibration = Math.max(
-    0,
-    Math.min(100, data.vibration + (Math.random() - 0.5) * 8)
-  );
+function updateHuntersList() {
+  const huntersList = document.getElementById("hunters-list");
 
-  // Small GPS drift
-  data.lat += (Math.random() - 0.5) * 0.0001;
-  data.lng += (Math.random() - 0.5) * 0.0001;
-
-  // Update display
-  document.getElementById("sound-level").textContent = Math.round(data.sound);
-  document.getElementById("vibration-level").textContent = Math.round(
-    data.vibration
-  );
-  document.getElementById("lat-coord").textContent = data.lat.toFixed(4);
-  document.getElementById("lng-coord").textContent = data.lng.toFixed(4);
-
-  // Update sensor bars
-  updateSensorBars();
-
-  // Occasionally simulate shot
-  if (Math.random() < 0.15) {
-    simulateShot();
-  }
-}
-
-// Update sensor progress bars
-function updateSensorBars() {
-  const soundBar = document.getElementById("sound-bar");
-  const vibrationBar = document.getElementById("vibration-bar");
-
-  if (soundBar) {
-    soundBar.style.width = (data.sound / 120) * 100 + "%";
+  if (dashboardData.hunters.length === 0) {
+    huntersList.innerHTML = '<div class="loading">No hunters registered</div>';
+    return;
   }
 
-  if (vibrationBar) {
-    vibrationBar.style.width = (data.vibration / 100) * 100 + "%";
+  const huntersHTML = dashboardData.hunters
+    .slice(0, 5)
+    .map(
+      (hunter) => `
+    <div class="hunter-item">
+      <h4>${hunter.name}</h4>
+      <div class="item-details">
+        License: ${hunter.license_number}<br>
+        Weapon: ${hunter.weapon_type}<br>
+        Location: ${hunter.current_location}
+      </div>
+      <span class="item-status ${
+        hunter.is_active ? "status-active" : "status-inactive"
+      }">
+        ${hunter.is_active ? "Active" : "Inactive"}
+      </span>
+    </div>
+  `
+    )
+    .join("");
+
+  huntersList.innerHTML = huntersHTML;
+}
+
+// Global variables for filtering and sorting
+let filteredShots = [];
+let currentSort = { field: null, direction: "asc" };
+
+function updateShotsList() {
+  if (dashboardData.shots.length === 0) {
+    document.getElementById("shots-list").innerHTML =
+      '<tr><td colspan="7" class="no-data">No recent shots</td></tr>';
+    document.getElementById("shots-count").textContent = "0 shots";
+    return;
   }
+
+  // Update filter options
+  updateFilterOptions();
+
+  // Apply current filters
+  filterShots();
 }
 
-// Simulate shot detection
-function simulateShot() {
-  // Increase sound and vibration
-  data.sound = Math.min(120, data.sound + Math.random() * 30 + 20);
-  data.vibration = Math.min(100, data.vibration + Math.random() * 40 + 30);
+function updateFilterOptions() {
+  // Update hunter filter
+  const hunterFilter = document.getElementById("hunterFilter");
+  const hunters = [
+    ...new Set(
+      dashboardData.shots.map((shot) => shot.hunter_name).filter(Boolean)
+    ),
+  ];
+  hunterFilter.innerHTML =
+    '<option value="">All Hunters</option>' +
+    hunters
+      .map((hunter) => `<option value="${hunter}">${hunter}</option>`)
+      .join("");
 
-  // Increase shot count
-  data.shots++;
-  document.getElementById("shots-count").textContent = data.shots;
-
-  // Add to activity log
-  addActivity("Shot detected - Zone A");
-
-  // Flash the shots counter
-  const shotsElement = document.getElementById("shots-count");
-  shotsElement.classList.add("pulse");
-  setTimeout(() => shotsElement.classList.remove("pulse"), 1000);
+  // Update location filter
+  const locationFilter = document.getElementById("locationFilter");
+  const locations = [
+    ...new Set(
+      dashboardData.shots.map((shot) => shot.location).filter(Boolean)
+    ),
+  ];
+  locationFilter.innerHTML =
+    '<option value="">All Locations</option>' +
+    locations
+      .map((location) => `<option value="${location}">${location}</option>`)
+      .join("");
 }
 
-// Add activity to the log
-function addActivity(description) {
-  const activityList = document.getElementById("activity-list");
-  const newActivity = document.createElement("div");
-  newActivity.className = "activity-item";
+function filterShots() {
+  const hunterFilter = document.getElementById("hunterFilter").value;
+  const weaponFilter = document.getElementById("weaponFilter").value;
+  const locationFilter = document.getElementById("locationFilter").value;
+  const dateFilter = document.getElementById("dateFilter").value;
 
-  const now = new Date();
-  const timeAgo = "Just now";
+  filteredShots = dashboardData.shots.filter((shot) => {
+    // Hunter filter
+    if (hunterFilter && shot.hunter_name !== hunterFilter) return false;
 
-  newActivity.innerHTML = `
-        <span class="activity-time">${timeAgo}</span>
-        <span class="activity-desc">${description}</span>
-    `;
+    // Weapon filter
+    if (weaponFilter && shot.weapon_used !== weaponFilter) return false;
 
-  // Add to top of list
-  activityList.insertBefore(newActivity, activityList.firstChild);
+    // Location filter
+    if (locationFilter && shot.location !== locationFilter) return false;
 
-  // Remove excess items (keep only 5)
-  while (activityList.children.length > 5) {
-    activityList.removeChild(activityList.lastChild);
+    // Date filter
+    if (dateFilter) {
+      const shotDate = new Date(shot.timestamp).toISOString().split("T")[0];
+      if (shotDate !== dateFilter) return false;
+    }
+
+    return true;
+  });
+
+  // Apply current sorting
+  if (currentSort.field) {
+    sortShotsArray(currentSort.field, currentSort.direction);
   }
+
+  renderShotsTable();
 }
 
-// Button actions
-function registerShot() {
-  data.shots++;
-  document.getElementById("shots-count").textContent = data.shots;
-  addActivity("Manual shot registered");
+function renderShotsTable() {
+  const shotsList = document.getElementById("shots-list");
+  const shotsCount = document.getElementById("shots-count");
 
-  // Simulate sensor spike
-  data.sound = Math.min(120, data.sound + 25);
-  data.vibration = Math.min(100, data.vibration + 35);
+  if (filteredShots.length === 0) {
+    shotsList.innerHTML =
+      '<tr><td colspan="7" class="no-data">No shots match the current filters</td></tr>';
+    shotsCount.textContent = "0 shots";
+    return;
+  }
+
+  const shotsHTML = filteredShots
+    .map(
+      (shot) => `
+      <tr class="shot-row">
+        <td class="hunter-name">${shot.hunter_name || "Unknown Hunter"}</td>
+        <td class="timestamp">${new Date(shot.timestamp).toLocaleString()}</td>
+        <td class="location">${shot.location}</td>
+        <td class="weapon">${shot.weapon_used}</td>
+        <td class="sound-level">${
+          shot.sound_level ? Math.round(shot.sound_level) + "dB" : "N/A"
+        }</td>
+        <td class="vibration-level">${
+          shot.vibration_level ? Math.round(shot.vibration_level) + "Hz" : "N/A"
+        }</td>
+        <td class="notes">${shot.notes || "-"}</td>
+      </tr>
+    `
+    )
+    .join("");
+
+  shotsList.innerHTML = shotsHTML;
+  shotsCount.textContent = `${filteredShots.length} shot${
+    filteredShots.length !== 1 ? "s" : ""
+  }`;
 }
 
-function addBullets() {
-  const amount = 50;
-  data.bullets += amount;
-  document.getElementById("bullets-count").textContent =
-    data.bullets.toLocaleString();
-  addActivity(`${amount} bullets added to inventory`);
-}
-
-function toggleAlert() {
-  const alertBtn = event.target;
-  const isActive = alertBtn.classList.contains("alert-active");
-
-  if (isActive) {
-    alertBtn.classList.remove("alert-active");
-    alertBtn.style.background = "#ff6b6b";
-    addActivity("Alert deactivated");
+function sortTable(field) {
+  // Toggle sort direction if same field, otherwise default to ascending
+  if (currentSort.field === field) {
+    currentSort.direction = currentSort.direction === "asc" ? "desc" : "asc";
   } else {
-    alertBtn.classList.add("alert-active");
-    alertBtn.style.background = "#ffe66d";
-    alertBtn.style.color = "#1a1a2e";
-    addActivity("Security alert activated");
+    currentSort.field = field;
+    currentSort.direction = "asc";
+  }
+
+  // Update sort arrows
+  document.querySelectorAll(".sort-arrow").forEach((arrow) => {
+    arrow.innerHTML = "";
+    arrow.parentElement.classList.remove("sorted-asc", "sorted-desc");
+  });
+
+  const arrow = document.getElementById(`sort-${field}`);
+  arrow.innerHTML = currentSort.direction === "asc" ? "▲" : "▼";
+  arrow.parentElement.classList.add(`sorted-${currentSort.direction}`);
+
+  // Sort and render
+  sortShotsArray(field, currentSort.direction);
+  renderShotsTable();
+}
+
+function sortShotsArray(field, direction) {
+  filteredShots.sort((a, b) => {
+    let valueA, valueB;
+
+    switch (field) {
+      case "hunter":
+        valueA = (a.hunter_name || "").toLowerCase();
+        valueB = (b.hunter_name || "").toLowerCase();
+        break;
+      case "timestamp":
+        valueA = new Date(a.timestamp);
+        valueB = new Date(b.timestamp);
+        break;
+      case "location":
+        valueA = (a.location || "").toLowerCase();
+        valueB = (b.location || "").toLowerCase();
+        break;
+      case "weapon":
+        valueA = (a.weapon_used || "").toLowerCase();
+        valueB = (b.weapon_used || "").toLowerCase();
+        break;
+      case "sound":
+        valueA = parseFloat(a.sound_level) || 0;
+        valueB = parseFloat(b.sound_level) || 0;
+        break;
+      case "vibration":
+        valueA = parseFloat(a.vibration_level) || 0;
+        valueB = parseFloat(b.vibration_level) || 0;
+        break;
+      default:
+        return 0;
+    }
+
+    if (valueA < valueB) return direction === "asc" ? -1 : 1;
+    if (valueA > valueB) return direction === "asc" ? 1 : -1;
+    return 0;
+  });
+}
+
+function clearFilters() {
+  document.getElementById("hunterFilter").value = "";
+  document.getElementById("weaponFilter").value = "";
+  document.getElementById("locationFilter").value = "";
+  document.getElementById("dateFilter").value = "";
+
+  // Clear sorting
+  currentSort = { field: null, direction: "asc" };
+  document.querySelectorAll(".sort-arrow").forEach((arrow) => {
+    arrow.innerHTML = "";
+    arrow.parentElement.classList.remove("sorted-asc", "sorted-desc");
+  });
+
+  filterShots();
+}
+
+function updateAmmunitionList() {
+  const ammoList = document.getElementById("ammo-inventory");
+
+  if (dashboardData.ammunition.length === 0) {
+    ammoList.innerHTML =
+      '<div class="loading">No ammunition in inventory</div>';
+    return;
+  }
+
+  const ammoHTML = dashboardData.ammunition
+    .map(
+      (ammo) => `
+    <div class="ammo-item">
+      <h4>${ammo.ammo_type_display || ammo.ammo_type}</h4>
+      <div class="item-details">
+        Quantity: ${ammo.quantity} rounds<br>
+        Location: ${ammo.location}<br>
+        ${ammo.cost_per_unit ? `Cost: $${ammo.cost_per_unit}/unit` : ""}
+      </div>
+      <span class="item-status ${
+        ammo.is_low_stock ? "status-low" : "status-active"
+      }">
+        ${ammo.is_low_stock ? "Low Stock" : "In Stock"}
+      </span>
+    </div>
+  `
+    )
+    .join("");
+
+  ammoList.innerHTML = ammoHTML;
+}
+
+function updateActivityList() {
+  const activityList = document.getElementById("activity-list");
+
+  if (dashboardData.activities.length === 0) {
+    activityList.innerHTML =
+      '<div class="activity-item"><span class="activity-time">--</span><span class="activity-desc">No recent activity</span></div>';
+    return;
+  }
+
+  const activitiesHTML = dashboardData.activities
+    .slice(0, 5)
+    .map(
+      (activity) => `
+    <div class="activity-item">
+      <span class="activity-time">${timeAgo(activity.timestamp)}</span>
+      <span class="activity-desc">${activity.description}</span>
+    </div>
+  `
+    )
+    .join("");
+
+  activityList.innerHTML = activitiesHTML;
+}
+
+// Modal Functions
+function showAddHunter() {
+  document.getElementById("addHunterModal").style.display = "block";
+}
+
+function showRecordShot() {
+  loadHuntersForShotForm();
+  document.getElementById("recordShotModal").style.display = "block";
+}
+
+function showAddAmmo() {
+  document.getElementById("addAmmoModal").style.display = "block";
+}
+
+function closeModal(modalId) {
+  document.getElementById(modalId).style.display = "none";
+  const form = document.querySelector(`#${modalId} form`);
+  if (form) form.reset();
+}
+
+function loadHuntersForShotForm() {
+  const hunterSelect = document.getElementById("shotHunter");
+  hunterSelect.innerHTML = '<option value="">Select hunter</option>';
+
+  dashboardData.hunters.forEach((hunter) => {
+    if (hunter.is_active) {
+      const option = document.createElement("option");
+      option.value = hunter.id;
+      option.textContent = `${hunter.name} (${hunter.license_number})`;
+      hunterSelect.appendChild(option);
+    }
+  });
+}
+
+// Form Handlers
+function setupFormHandlers() {
+  document
+    .getElementById("hunterForm")
+    .addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const formData = new FormData(e.target);
+      const hunterData = Object.fromEntries(formData);
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/hunters/hunters/`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(hunterData),
+        });
+
+        if (response.ok) {
+          closeModal("addHunterModal");
+          showSuccess("Hunter added successfully!");
+          await fetchHunters();
+          await fetchDashboardStats();
+        } else {
+          const error = await response.json();
+          showError(`Error: ${JSON.stringify(error)}`);
+        }
+      } catch (error) {
+        showError("Failed to add hunter. Please try again.");
+      }
+    });
+}
+
+// Connection Management
+function startAutoRefresh() {
+  if (refreshInterval) clearInterval(refreshInterval);
+  if (isConnected) {
+    refreshInterval = setInterval(() => {
+      if (isConnected) {
+        refreshData();
+      }
+    }, 60000); // Refresh every 60 seconds instead of 30
   }
 }
 
-// Show notification
-function showNotification(message) {
-  // Create simple alert for now
-  alert(message);
+function stopAutoRefresh() {
+  if (refreshInterval) {
+    clearInterval(refreshInterval);
+    refreshInterval = null;
+  }
 }
 
-// Make functions available globally
-window.registerShot = registerShot;
-window.addBullets = addBullets;
-window.toggleAlert = toggleAlert;
+function updateConnectionStatus(message) {
+  console.log(message);
+  // You can add a status indicator to the UI here
+  const statusElement = document.querySelector(".connection-status");
+  if (statusElement) {
+    statusElement.textContent = message;
+    statusElement.className = `connection-status ${
+      isConnected ? "connected" : "disconnected"
+    }`;
+  }
+}
+
+function loadOfflineData() {
+  // Display placeholder/offline data
+  dashboardData.stats = { active_hunters: 0, total_shots: 0, total_bullets: 0 };
+  updateStatsDisplay();
+
+  document.getElementById("hunters-list").innerHTML =
+    '<div class="loading">Server offline - No data available</div>';
+  document.getElementById("shots-list").innerHTML =
+    '<div class="loading">Server offline - No data available</div>';
+  document.getElementById("ammo-inventory").innerHTML =
+    '<div class="loading">Server offline - No data available</div>';
+  document.getElementById("activity-list").innerHTML =
+    '<div class="activity-item"><span class="activity-time">--</span><span class="activity-desc">Server offline</span></div>';
+}
+
+// Utility Functions
+function refreshData() {
+  if (isConnected) {
+    initializeAPI();
+  }
+}
+
+function timeAgo(timestamp) {
+  const now = new Date();
+  const time = new Date(timestamp);
+  const diffInSeconds = Math.floor((now - time) / 1000);
+
+  if (diffInSeconds < 60) {
+    return `${diffInSeconds}s ago`;
+  } else if (diffInSeconds < 3600) {
+    return `${Math.floor(diffInSeconds / 60)}m ago`;
+  } else if (diffInSeconds < 86400) {
+    return `${Math.floor(diffInSeconds / 3600)}h ago`;
+  } else {
+    return `${Math.floor(diffInSeconds / 86400)}d ago`;
+  }
+}
+
+function showSuccess(message) {
+  alert(` ${message}`);
+}
+
+function showError(message) {
+  alert(` ${message}`);
+}
+
+window.onclick = function (event) {
+  if (event.target.classList.contains("modal")) {
+    event.target.style.display = "none";
+  }
+};
+
+function retryConnection() {
+  connectionAttempts = 0;
+  updateConnectionStatus("Retrying connection...");
+  initializeAPI();
+}
+
+window.showAddHunter = showAddHunter;
+window.showRecordShot = showRecordShot;
+window.showAddAmmo = showAddAmmo;
+window.closeModal = closeModal;
+window.refreshData = refreshData;
+window.retryConnection = retryConnection;
