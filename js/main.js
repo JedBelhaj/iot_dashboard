@@ -1,8 +1,8 @@
 ﻿// IoT Dashboard JavaScript with Django API Integration for Backend Data
 
 // Configuration
-const API_BASE_URL = "http://localhost:8000/api";
-const WS_BASE_URL = "ws://localhost:8000/ws";
+const API_BASE_URL = "http://192.168.1.3:8000/api";
+const WS_BASE_URL = "ws://192.168.1.3:8000/ws";
 
 // Connection status
 let isConnected = false;
@@ -17,6 +17,7 @@ let simulationInterval = null;
 // Data storage
 let dashboardData = {
   hunters: [],
+  guns: [],
   shots: [],
   ammunition: [],
   activities: [],
@@ -142,7 +143,14 @@ async function fetchHunters() {
     if (response.ok) {
       const data = await response.json();
       dashboardData.hunters = data.results || data;
+      console.log("Fetched hunters:", dashboardData.hunters);
       updateHuntersList();
+    } else {
+      console.error(
+        "Failed to fetch hunters:",
+        response.status,
+        response.statusText
+      );
     }
   } catch (error) {
     console.error("Error fetching hunters:", error);
@@ -151,12 +159,20 @@ async function fetchHunters() {
 
 async function fetchRecentShots() {
   try {
-    const response = await fetch(`${API_BASE_URL}/hunters/shots/recent/`);
+    const response = await fetch(`${API_BASE_URL}/hunters/shots/`);
     if (response.ok) {
-      dashboardData.shots = await response.json();
+      const data = await response.json();
+      dashboardData.shots = data.results || data;
       // Initialize filtered shots with all shots
       filteredShots = [...dashboardData.shots];
+      console.log("Fetched shots:", dashboardData.shots);
       updateShotsList();
+    } else {
+      console.error(
+        "Failed to fetch shots:",
+        response.status,
+        response.statusText
+      );
     }
   } catch (error) {
     console.error("Error fetching shots:", error);
@@ -165,11 +181,18 @@ async function fetchRecentShots() {
 
 async function fetchAmmunition() {
   try {
-    const response = await fetch(`${API_BASE_URL}/ammunition/ammunition/`);
+    const response = await fetch(`${API_BASE_URL}/ammunition/inventory/`);
     if (response.ok) {
       const data = await response.json();
-      dashboardData.ammo = data.results || data;
-      updateAmmoInventory();
+      dashboardData.ammunition = data.results || data;
+      console.log("Fetched ammunition:", dashboardData.ammunition);
+      updateAmmunitionList();
+    } else {
+      console.error(
+        "Failed to fetch ammunition:",
+        response.status,
+        response.statusText
+      );
     }
   } catch (error) {
     console.error("Error fetching ammunition:", error);
@@ -178,11 +201,10 @@ async function fetchAmmunition() {
 
 async function fetchRecentActivities() {
   try {
-    const response = await fetch(
-      `${API_BASE_URL}/activities/activities/recent/`
-    );
+    const response = await fetch(`${API_BASE_URL}/activities/activities/`);
     if (response.ok) {
-      dashboardData.activities = await response.json();
+      const data = await response.json();
+      dashboardData.activities = data.results || data;
       updateActivityList();
     }
   } catch (error) {
@@ -196,6 +218,14 @@ async function fetchGuns() {
     if (response.ok) {
       const data = await response.json();
       dashboardData.guns = data.results || data;
+      console.log("Fetched guns:", dashboardData.guns);
+      updateGunsList();
+    } else {
+      console.error(
+        "Failed to fetch guns:",
+        response.status,
+        response.statusText
+      );
     }
   } catch (error) {
     console.error("Error fetching guns:", error);
@@ -234,7 +264,6 @@ function updateHuntersList() {
   }
 
   const huntersHTML = dashboardData.hunters
-    .slice(0, 5)
     .map(
       (hunter) => `
     <div class="hunter-item">
@@ -255,6 +284,47 @@ function updateHuntersList() {
     .join("");
 
   huntersList.innerHTML = huntersHTML;
+}
+
+function updateGunsList() {
+  const gunsList = document.getElementById("guns-list");
+
+  if (dashboardData.guns.length === 0) {
+    gunsList.innerHTML = '<div class="loading">No guns registered</div>';
+    return;
+  }
+
+  const gunsHTML = dashboardData.guns
+    .map(
+      (gun) => `
+    <div class="gun-item">
+      <h4>${gun.make} ${gun.model}</h4>
+      <div class="item-details">
+        Device ID: ${gun.device_id}<br>
+        Owner: ${gun.owner_name || "Unknown"}<br>
+        Type: ${gun.weapon_type}<br>
+        Battery: ${gun.battery_level}%
+        ${
+          gun.battery_level < 20
+            ? ' <span style="color: #ff6b6b;">⚠️</span>'
+            : ""
+        }
+      </div>
+      <span class="item-status ${
+        gun.status === "active"
+          ? "status-active"
+          : gun.status === "maintenance"
+          ? "status-inactive"
+          : "status-low"
+      }">
+        ${gun.status.charAt(0).toUpperCase() + gun.status.slice(1)}
+      </span>
+    </div>
+  `
+    )
+    .join("");
+
+  gunsList.innerHTML = gunsHTML;
 }
 
 // Global variables for filtering and sorting
@@ -488,19 +558,27 @@ function updateAmmunitionList() {
 function updateActivityList() {
   const activityList = document.getElementById("activity-list");
 
-  if (dashboardData.activities.length === 0) {
+  if (!activityList) {
+    console.log("Activity list element not found");
+    return;
+  }
+
+  if (!dashboardData.activities || dashboardData.activities.length === 0) {
     activityList.innerHTML =
       '<div class="activity-item"><span class="activity-time">--</span><span class="activity-desc">No recent activity</span></div>';
     return;
   }
 
   const activitiesHTML = dashboardData.activities
-    .slice(0, 5)
     .map(
       (activity) => `
     <div class="activity-item">
-      <span class="activity-time">${timeAgo(activity.timestamp)}</span>
-      <span class="activity-desc">${activity.description}</span>
+      <span class="activity-time">${
+        activity.timestamp ? timeAgo(activity.timestamp) : "--"
+      }</span>
+      <span class="activity-desc">${
+        activity.description || "Unknown activity"
+      }</span>
     </div>
   `
     )
@@ -512,6 +590,18 @@ function updateActivityList() {
 // Modal Functions
 function showAddHunter() {
   document.getElementById("addHunterModal").style.display = "block";
+}
+
+function showAddGun() {
+  // Populate owner dropdown
+  const ownerSelect = document.getElementById("gunOwner");
+  ownerSelect.innerHTML =
+    '<option value="">Select owner</option>' +
+    dashboardData.hunters
+      .map((hunter) => `<option value="${hunter.id}">${hunter.name}</option>`)
+      .join("");
+
+  document.getElementById("addGunModal").style.display = "block";
 }
 
 function showRecordShot() {
@@ -533,24 +623,31 @@ async function loadHuntersForShotForm() {
   const gunSelect = document.getElementById("shotGun");
   gunSelect.innerHTML = '<option value="">Select gun</option>';
 
-  try {
-    const response = await fetch(`${API_BASE_URL}/hunters/guns/`);
-    if (response.ok) {
-      const data = await response.json();
-      const guns = data.results || data;
-
-      guns.forEach((gun) => {
-        if (gun.status === "active") {
-          const option = document.createElement("option");
-          option.value = gun.id;
-          option.textContent = `${gun.owner_name}: ${gun.make} ${gun.model} (${gun.device_id})`;
-          gunSelect.appendChild(option);
-        }
-      });
+  // Use cached data if available, otherwise fetch
+  let guns = dashboardData.guns;
+  if (guns.length === 0) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/hunters/guns/`);
+      if (response.ok) {
+        const data = await response.json();
+        guns = data.results || data;
+      }
+    } catch (error) {
+      console.error("Error fetching guns:", error);
+      return;
     }
-  } catch (error) {
-    console.error("Error fetching guns:", error);
   }
+
+  guns.forEach((gun) => {
+    if (gun.status === "active") {
+      const option = document.createElement("option");
+      option.value = gun.id;
+      option.textContent = `${gun.owner_name || gun.owner}: ${gun.make} ${
+        gun.model
+      } (${gun.device_id})`;
+      gunSelect.appendChild(option);
+    }
+  });
 }
 
 // Form Handlers
@@ -610,6 +707,62 @@ function setupFormHandlers() {
       showError("Failed to record shot. Please try again.");
     }
   });
+
+  document.getElementById("ammoForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const ammoData = Object.fromEntries(formData);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/ammunition/inventory/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(ammoData),
+      });
+
+      if (response.ok) {
+        closeModal("addAmmoModal");
+        showSuccess("Ammunition added successfully!");
+        await fetchAmmunition();
+        document.getElementById("ammoForm").reset();
+      } else {
+        const error = await response.json();
+        showError(`Error: ${JSON.stringify(error)}`);
+      }
+    } catch (error) {
+      showError("Failed to add ammunition. Please try again.");
+    }
+  });
+
+  document.getElementById("gunForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const gunData = Object.fromEntries(formData);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/hunters/guns/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(gunData),
+      });
+
+      if (response.ok) {
+        closeModal("addGunModal");
+        showSuccess("Gun registered successfully!");
+        await fetchGuns();
+        document.getElementById("gunForm").reset();
+      } else {
+        const error = await response.json();
+        showError(`Error: ${JSON.stringify(error)}`);
+      }
+    } catch (error) {
+      showError("Failed to register gun. Please try again.");
+    }
+  });
 }
 
 // Connection Management
@@ -636,6 +789,51 @@ function stopAutoRefresh() {
     clearInterval(refreshInterval);
     refreshInterval = null;
   }
+}
+
+function loadOfflineData() {
+  // Load mock data when offline
+  dashboardData.hunters = [
+    {
+      id: 1,
+      name: "Mock Hunter",
+      license_number: "MOCK-001",
+      current_location: "Offline Mode",
+      is_active: true,
+      total_guns: 1,
+    },
+  ];
+
+  dashboardData.guns = [
+    {
+      id: 1,
+      device_id: "MOCK-GUN-001",
+      make: "Mock",
+      model: "Offline Gun",
+      weapon_type: "rifle",
+      battery_level: 85,
+      status: "active",
+      owner_name: "Mock Hunter",
+    },
+  ];
+
+  dashboardData.shots = [];
+  dashboardData.ammunition = [];
+  dashboardData.activities = [];
+
+  dashboardData.stats = {
+    active_hunters: 1,
+    total_shots: 0,
+    total_bullets: 0,
+  };
+
+  // Update displays
+  updateStatsDisplay();
+  updateHuntersList();
+  updateGunsList();
+  updateShotsList();
+  updateAmmunitionList();
+  updateActivityList();
 }
 
 function updateConnectionStatus(message) {
@@ -764,6 +962,8 @@ function loadOfflineData() {
 
   document.getElementById("hunters-list").innerHTML =
     '<div class="loading">Server offline - No data available</div>';
+  document.getElementById("guns-list").innerHTML =
+    '<div class="loading">Server offline - No data available</div>';
   document.getElementById("shots-list").innerHTML =
     '<div class="loading">Server offline - No data available</div>';
   document.getElementById("ammo-inventory").innerHTML =
@@ -775,10 +975,13 @@ function loadOfflineData() {
 // Utility Functions
 function refreshData() {
   if (isConnected) {
-    // Only refresh key data, not full initialization
+    // Refresh all data to ensure consistency
     console.log("Auto-refreshing dashboard data...");
     fetchDashboardStats();
+    fetchHunters();
+    fetchGuns();
     fetchRecentShots();
+    fetchAmmunition();
     fetchRecentActivities();
     updateLastRefreshTime();
   }
@@ -948,9 +1151,13 @@ async function generateRandomShotData() {
 }
 
 window.showAddHunter = showAddHunter;
+window.showAddGun = showAddGun;
 window.showRecordShot = showRecordShot;
 window.showAddAmmo = showAddAmmo;
 window.closeModal = closeModal;
 window.refreshData = refreshData;
 window.retryConnection = retryConnection;
 window.toggleSimulation = toggleSimulation;
+window.filterShots = filterShots;
+window.clearFilters = clearFilters;
+window.sortTable = sortTable;

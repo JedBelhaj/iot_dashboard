@@ -1,0 +1,242 @@
+@startuml IoT_Dashboard_Backend_Class_Diagram
+
+!define ENTITY class
+!define AGGREGATE_ROOT <<AggregateRoot>>
+!define SERVICE <<Service>>
+
+title IoT Gun Control Dashboard - Backend Class Diagram
+
+package "Django Built-in" {
+    class User {
+        +id: BigAutoField
+        +username: CharField
+        +email: EmailField
+        +first_name: CharField
+        +last_name: CharField
+        +is_active: BooleanField
+        +date_joined: DateTimeField
+    }
+
+    class ContentType {
+        +app_label: CharField
+        +model: CharField
+    }
+}
+
+package "hunters" AGGREGATE_ROOT {
+    ENTITY Hunter {
+        +id: BigAutoField
+        +name: CharField(100)
+        +license_number: CharField(50) {unique}
+        +current_location: CharField(100)
+        +is_active: BooleanField
+        +registered_date: DateTimeField
+        +last_active: DateTimeField
+        +latitude: FloatField {null}
+        +longitude: FloatField {null}
+        --
+        +__str__(): str
+        +total_shots: int {property}
+        +total_guns: int {property}
+    }
+
+    ENTITY Gun {
+        +id: BigAutoField
+        +device_id: CharField(50) {unique}
+        +serial_number: CharField(100) {unique}
+        +make: CharField(50)
+        +model: CharField(50)
+        +caliber: CharField(20)
+        +weapon_type: CharField(20)
+        +status: CharField(20)
+        +registered_date: DateTimeField
+        +last_used: DateTimeField {null}
+        +firmware_version: CharField(20)
+        +battery_level: IntegerField
+        +last_sync: DateTimeField {null}
+        +notes: TextField
+        --
+        +WEAPON_TYPES: list
+        +STATUS_CHOICES: list
+        --
+        +__str__(): str
+        +total_shots: int {property}
+        +is_low_battery: bool {property}
+    }
+
+    ENTITY Shot {
+        +id: BigAutoField
+        +timestamp: DateTimeField
+        +sound_level: FloatField
+        +vibration_level: FloatField
+        +latitude: FloatField
+        +longitude: FloatField
+        +notes: TextField
+        --
+        +__str__(): str
+        +hunter: Hunter {property}
+        +hunter_name: str {property}
+        +weapon_used: str {property}
+        +location: str {property}
+    }
+}
+
+package "ammunition" {
+    ENTITY Ammunition {
+        +id: BigAutoField
+        +ammo_type: CharField(10)
+        +quantity: PositiveIntegerField
+        +location: CharField(100)
+        +purchase_date: DateTimeField
+        +cost_per_unit: DecimalField {null}
+        +supplier: CharField(100)
+        +minimum_stock: PositiveIntegerField
+        +expiry_date: DateField {null}
+        --
+        +AMMO_TYPES: list
+        --
+        +__str__(): str
+        +is_low_stock: bool {property}
+        +total_cost: Decimal {property}
+    }
+
+    ENTITY AmmunitionTransaction {
+        +id: BigAutoField
+        +transaction_type: CharField(20)
+        +quantity: IntegerField
+        +unit_price: DecimalField {null}
+        +total_cost: DecimalField {null}
+        +timestamp: DateTimeField
+        +notes: TextField
+        +reference_number: CharField(50)
+        +supplier: CharField(100)
+        --
+        +TRANSACTION_TYPES: list
+        --
+        +save(): void
+        +__str__(): str
+        +net_quantity: int {property}
+    }
+}
+
+package "activities" {
+    ENTITY Activity {
+        +id: BigAutoField
+        +activity_type: CharField(30)
+        +title: CharField(200)
+        +description: TextField
+        +priority: CharField(10)
+        +object_id: PositiveIntegerField {null}
+        +location: CharField(100)
+        +metadata: JSONField
+        +timestamp: DateTimeField
+        +is_read: BooleanField
+        --
+        +ACTIVITY_TYPES: list
+        +PRIORITY_LEVELS: list
+        --
+        +__str__(): str
+    }
+
+    ENTITY SystemAlert {
+        +id: BigAutoField
+        +alert_type: CharField(30)
+        +title: CharField(200)
+        +message: TextField
+        +status: CharField(20)
+        +device_id: CharField(50)
+        +location: CharField(100)
+        +created_at: DateTimeField
+        +acknowledged_at: DateTimeField {null}
+        +resolved_at: DateTimeField {null}
+        --
+        +ALERT_TYPES: list
+        +STATUS_CHOICES: list
+        --
+        +__str__(): str
+        +is_active: bool {property}
+    }
+}
+
+package "sensors" {
+    ENTITY SensorReading {
+        +id: BigAutoField
+        +sensor_type: CharField(20)
+        +value: FloatField
+        +unit: CharField(10)
+        +timestamp: DateTimeField
+        +latitude: FloatField {null}
+        +longitude: FloatField {null}
+        +location_name: CharField(100)
+        +device_id: CharField(50)
+        +battery_level: FloatField {null}
+        +signal_strength: FloatField {null}
+        +is_anomaly: BooleanField
+        --
+        +SENSOR_TYPES: list
+        --
+        +__str__(): str
+    }
+
+    ENTITY SensorDevice {
+        +id: BigAutoField
+        +device_id: CharField(50) {unique}
+        +name: CharField(100)
+        +sensor_type: CharField(20)
+        +status: CharField(20)
+        +location_name: CharField(100)
+        +latitude: FloatField
+        +longitude: FloatField
+        +firmware_version: CharField(20)
+        +last_seen: DateTimeField
+        +created_date: DateTimeField
+        --
+        +STATUS_CHOICES: list
+        --
+        +__str__(): str
+        +is_online: bool {property}
+    }
+}
+
+' Relationships
+Hunter ||--o{ Gun : "owns"
+Gun ||--o{ Shot : "fires"
+Hunter ||--o{ AmmunitionTransaction : "involves"
+Gun ||--o{ AmmunitionTransaction : "uses"
+Ammunition ||--o{ AmmunitionTransaction : "tracks"
+
+' Generic relationships
+Activity }o--|| ContentType : "references"
+Activity ||--o{ SystemAlert : "generates"
+
+' Notes and constraints
+note top of Hunter : "Registered hunters with\nGPS tracking capability"
+note top of Gun : "IoT-enabled firearms with\nreal-time monitoring"
+note top of Shot : "Automatically recorded\nshot events from IoT sensors"
+note top of Ammunition : "Inventory management\nwith low-stock alerts"
+note top of Activity : "System-wide activity logging\nwith generic foreign keys"
+note top of SensorReading : "Raw sensor data from\nIoT devices"
+
+' Key relationships annotations
+Gun::owner --> Hunter : "ForeignKey\n(CASCADE)"
+Shot::gun --> Gun : "ForeignKey\n(CASCADE)"
+AmmunitionTransaction::ammunition --> Ammunition : "ForeignKey\n(CASCADE)"
+AmmunitionTransaction::hunter --> Hunter : "ForeignKey\n(SET_NULL)"
+AmmunitionTransaction::gun --> Gun : "ForeignKey\n(SET_NULL)"
+Activity::content_type --> ContentType : "ForeignKey\n(CASCADE)"
+SystemAlert::activity --> Activity : "ForeignKey\n(CASCADE)"
+
+' Additional styling
+skinparam class {
+    BackgroundColor<<AggregateRoot>> LightBlue
+    BackgroundColor<<Service>> LightGreen
+    BorderColor Black
+    FontName Arial
+}
+
+skinparam note {
+    BackgroundColor LightYellow
+    BorderColor DarkGray
+}
+
+@enduml

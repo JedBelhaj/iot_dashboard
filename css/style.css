@@ -124,12 +124,36 @@ body {
     margin-right: 8px;
 }
 
-.hunters-list, .shots-list, .ammo-inventory {
-    max-height: 300px;
+.hunters-list, .guns-list, .shots-list, .ammo-inventory {
+    max-height: 400px;
     overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #4ecdc4 #1a1a2e;
 }
 
-.hunter-item, .shot-item, .ammo-item {
+.hunters-list::-webkit-scrollbar,
+.guns-list::-webkit-scrollbar,
+.shots-list::-webkit-scrollbar,
+.ammo-inventory::-webkit-scrollbar {
+    width: 8px;
+}
+
+.hunters-list::-webkit-scrollbar-track,
+.guns-list::-webkit-scrollbar-track,
+.shots-list::-webkit-scrollbar-track,
+.ammo-inventory::-webkit-scrollbar-track {
+    background: #1a1a2e;
+}
+
+.hunters-list::-webkit-scrollbar-thumb,
+.guns-list::-webkit-scrollbar-thumb,
+.shots-list::-webkit-scrollbar-thumb,
+.ammo-inventory::-webkit-scrollbar-thumb {
+    background: #4ecdc4;
+    border-radius: 4px;
+}
+
+.hunter-item, .gun-item, .shot-item, .ammo-item {
     background: #1a1a2e;
     padding: 12px;
     margin-bottom: 8px;
@@ -137,7 +161,7 @@ body {
     border-left: 3px solid #4ecdc4;
 }
 
-.hunter-item h4, .shot-item h4, .ammo-item h4 {
+.hunter-item h4, .gun-item h4, .shot-item h4, .ammo-item h4 {
     color: #4ecdc4;
     margin-bottom: 5px;
 }
@@ -169,6 +193,16 @@ body {
 .status-low {
     background: #ff6b6b;
     color: #fff;
+}
+
+.status-maintenance {
+    background: #ffe66d;
+    color: #1a1a2e;
+}
+
+.battery-warning {
+    color: #ff6b6b;
+    font-weight: bold;
 }
 
 .loading {

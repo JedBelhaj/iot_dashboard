@@ -51,6 +51,17 @@
           </button>
         </div>
 
+        <!-- IoT Guns -->
+        <div class="data-section">
+          <h3><i class="fas fa-crosshairs"></i> IoT Guns</h3>
+          <div class="guns-list" id="guns-list">
+            <div class="loading">Loading guns...</div>
+          </div>
+          <button class="add-btn" onclick="showAddGun()">
+            <i class="fas fa-plus"></i> Register Gun
+          </button>
+        </div>
+
         <!-- Ammunition Inventory -->
         <div class="data-section">
           <h3><i class="fas fa-boxes"></i> Ammunition Inventory</h3>
@@ -61,12 +72,23 @@
             <i class="fas fa-plus"></i> Add Stock
           </button>
         </div>
+
+        <!-- Recent Activities -->
+        <div class="data-section">
+          <h3><i class="fas fa-history"></i> Recent Activities</h3>
+          <div class="activity-list" id="activity-list">
+            <div class="loading">Loading activities...</div>
+          </div>
+        </div>
       </div>
 
       <!-- Quick Actions -->
       <div class="actions">
         <button class="action-btn" onclick="showAddHunter()">
           <i class="fas fa-user-plus"></i> Add Hunter
+        </button>
+        <button class="action-btn" onclick="showAddGun()">
+          <i class="fas fa-crosshairs"></i> Register Gun
         </button>
         <button class="action-btn" onclick="showRecordShot()">
           <i class="fas fa-bullseye"></i> Record Shot
@@ -339,6 +361,99 @@
               Cancel
             </button>
             <button type="submit">Add Ammunition</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Add Gun Modal -->
+    <div id="addGunModal" class="modal">
+      <div class="modal-content">
+        <span class="close" onclick="closeModal('addGunModal')">&times;</span>
+        <h2>Register IoT Gun</h2>
+        <form id="gunForm">
+          <div class="form-group">
+            <label for="gunOwner">Owner:</label>
+            <select id="gunOwner" name="owner" required>
+              <option value="">Select owner</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="deviceId">Device ID:</label>
+            <input
+              type="text"
+              id="deviceId"
+              name="device_id"
+              placeholder="IOT-GUN-001"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="serialNumber">Serial Number:</label>
+            <input
+              type="text"
+              id="serialNumber"
+              name="serial_number"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="gunMake">Make:</label>
+            <input type="text" id="gunMake" name="make" required />
+          </div>
+          <div class="form-group">
+            <label for="gunModel">Model:</label>
+            <input type="text" id="gunModel" name="model" required />
+          </div>
+          <div class="form-group">
+            <label for="caliber">Caliber:</label>
+            <input
+              type="text"
+              id="caliber"
+              name="caliber"
+              placeholder=".308, 12ga, 9mm"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="weaponType">Weapon Type:</label>
+            <select id="weaponType" name="weapon_type" required>
+              <option value="">Select type</option>
+              <option value="rifle">Rifle</option>
+              <option value="shotgun">Shotgun</option>
+              <option value="handgun">Handgun</option>
+              <option value="bow">Bow</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="batteryLevel">Battery Level (%):</label>
+            <input
+              type="number"
+              id="batteryLevel"
+              name="battery_level"
+              min="0"
+              max="100"
+              value="100"
+            />
+          </div>
+          <div class="form-group">
+            <label for="firmwareVersion">Firmware Version:</label>
+            <input
+              type="text"
+              id="firmwareVersion"
+              name="firmware_version"
+              placeholder="1.0.0"
+            />
+          </div>
+          <div class="form-group">
+            <label for="gunNotes">Notes:</label>
+            <textarea id="gunNotes" name="notes" rows="3"></textarea>
+          </div>
+          <div class="form-actions">
+            <button type="button" onclick="closeModal('addGunModal')">
+              Cancel
+            </button>
+            <button type="submit">Register Gun</button>
           </div>
         </form>
       </div>

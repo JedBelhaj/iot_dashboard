@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 from decouple import config
 
+CORS_ALLOW_ALL_ORIGINS = True
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -15,7 +16,7 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-iot-dashboard-dev-key
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=True, cast=bool)
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0', '192.168.1.3', '*']
 
 # Application definition
 DJANGO_APPS = [
@@ -149,6 +150,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:3000",
     "http://localhost:8080",
     "http://127.0.0.1:8080",
+    "http://192.168.1.3:8000",
+    "http://localhost:8000",
     "file://",
 ]
 
