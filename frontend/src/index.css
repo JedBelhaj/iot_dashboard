@@ -290,22 +290,44 @@ code {
 /* Loading States */
 .loading {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 40px;
   color: #a0a0a0;
   font-size: 14px;
+  gap: 15px;
 }
 
-.loading-spinner {
-  display: inline-block;
-  width: 20px;
-  height: 20px;
+.loading::before {
+  content: '';
+  width: 32px;
+  height: 32px;
   border: 3px solid #0f3460;
   border-radius: 50%;
   border-top-color: #4ecdc4;
   animation: spin 1s ease-in-out infinite;
-  margin-right: 10px;
+}
+
+.loading-spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  color: #a0a0a0;
+  font-size: 14px;
+  gap: 15px;
+}
+
+.loading-spinner::before {
+  content: '';
+  width: 32px;
+  height: 32px;
+  border: 3px solid #0f3460;
+  border-radius: 50%;
+  border-top-color: #4ecdc4;
+  animation: spin 1s ease-in-out infinite;
 }
 
 @keyframes spin {
@@ -452,6 +474,241 @@ code {
   }
 }
 
+/* Compliance System Styles */
+.violation-low {
+  border-left: 4px solid #ffc107;
+}
+
+.violation-medium {
+  border-left: 4px solid #fd7e14;
+}
+
+.violation-high {
+  border-left: 4px solid #dc3545;
+}
+
+.violation-critical {
+  border-left: 4px solid #d63384;
+  box-shadow: 0 0 10px rgba(214, 51, 132, 0.3);
+}
+
+.violation-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.violation-type {
+  color: #ff6b6b;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.violation-description {
+  color: #ccc;
+  margin-bottom: 8px;
+}
+
+.violation-time {
+  font-size: 12px;
+  color: #888;
+}
+
+.resolved-badge {
+  color: #28a745;
+  font-size: 12px;
+  margin-top: 8px;
+}
+
+.resolved-badge i {
+  margin-right: 4px;
+}
+
+/* Zone styles */
+.zone-active {
+  border-left: 4px solid #28a745;
+}
+
+.zone-inactive {
+  border-left: 4px solid #6c757d;
+  opacity: 0.7;
+}
+
+.zone-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.zone-description {
+  color: #ccc;
+  margin-bottom: 8px;
+}
+
+.zone-season, .zone-hours {
+  font-size: 14px;
+  color: #aaa;
+  margin-bottom: 4px;
+}
+
+.zone-location {
+  font-size: 12px;
+  color: #888;
+  font-family: monospace;
+}
+
+/* License styles */
+.license-valid {
+  border-left: 4px solid #28a745;
+}
+
+.license-invalid {
+  border-left: 4px solid #dc3545;
+  opacity: 0.8;
+}
+
+.license-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.license-number {
+  color: #ff6b6b;
+  font-family: monospace;
+  margin-bottom: 4px;
+}
+
+.license-dates {
+  color: #aaa;
+  font-size: 14px;
+}
+
+.expiring-warning {
+  color: #ffc107;
+  font-size: 12px;
+  margin-top: 8px;
+}
+
+.expiring-warning i {
+  margin-right: 4px;
+}
+
+/* Ammunition purchase styles */
+.ammo-purchase-available {
+  border-left: 4px solid #28a745;
+}
+
+.ammo-purchase-depleted {
+  border-left: 4px solid #dc3545;
+}
+
+.purchase-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.ammo-type {
+  background: #0f3460;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  color: #4cc9f0;
+  font-family: monospace;
+}
+
+.purchase-quantity {
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.purchase-quantity .available {
+  color: #28a745;
+}
+
+.purchase-quantity .depleted {
+  color: #dc3545;
+  font-weight: bold;
+}
+
+.purchase-details {
+  color: #aaa;
+  margin-bottom: 4px;
+}
+
+.purchase-date {
+  color: #888;
+  font-size: 12px;
+}
+
+.overuse-warning {
+  color: #dc3545;
+  font-size: 12px;
+  font-weight: bold;
+  margin-top: 8px;
+  padding: 4px 8px;
+  background: rgba(220, 53, 69, 0.1);
+  border-radius: 4px;
+}
+
+.overuse-warning i {
+  margin-right: 4px;
+}
+
+/* Badge styles */
+.badge {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.badge.low {
+  background: #ffc107;
+  color: #212529;
+}
+
+.badge.medium {
+  background: #fd7e14;
+  color: white;
+}
+
+.badge.high {
+  background: #dc3545;
+  color: white;
+}
+
+.badge.critical {
+  background: #d63384;
+  color: white;
+}
+
+.badge.active {
+  background: #28a745;
+  color: white;
+}
+
+.badge.inactive {
+  background: #6c757d;
+  color: white;
+}
+
+.badge.valid {
+  background: #28a745;
+  color: white;
+}
+
+.badge.expired {
+  background: #dc3545;
+  color: white;
+}
+
 /* Animations for smooth transitions */
 .fade-in {
   animation: fadeIn 0.3s ease-in;
@@ -474,5 +731,405 @@ code {
   to {
     transform: translateY(0);
     opacity: 1;
+  }
+}
+
+/* Clickable Items */
+.item-card.clickable {
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.item-card.clickable:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.view-details {
+  color: #4cc9f0;
+  font-size: 12px;
+  margin-top: 8px;
+  opacity: 0.8;
+}
+
+.view-details i {
+  margin-right: 4px;
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease;
+}
+
+.modal-content {
+  background: #1a1a2e;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: slideUp 0.3s ease;
+  border: 2px solid #0f3460;
+}
+
+.hunter-modal {
+  width: 90%;
+  max-width: 1000px;
+}
+
+.modal-header {
+  background: #16213e;
+  padding: 20px;
+  border-radius: 12px 12px 0 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid #0f3460;
+}
+
+.modal-header h2 {
+  color: #ff6b6b;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: #ccc;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 50%;
+  transition: background-color 0.2s ease;
+}
+
+.close-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ff6b6b;
+}
+
+.modal-body {
+  padding: 20px;
+}
+
+/* Hunter Overview */
+.hunter-overview {
+  margin-bottom: 30px;
+}
+
+.overview-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.stat-item {
+  background: #16213e;
+  padding: 15px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  border-left: 4px solid #4cc9f0;
+}
+
+.stat-item i {
+  font-size: 24px;
+  color: #4cc9f0;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #aaa;
+  text-transform: uppercase;
+}
+
+.stat-value {
+  font-size: 18px;
+  font-weight: bold;
+  color: #eee;
+}
+
+.stat-value.low-ammo {
+  color: #ff6b6b;
+}
+
+.license-status {
+  padding: 10px 15px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: bold;
+}
+
+.license-status.valid {
+  background: rgba(40, 167, 69, 0.2);
+  color: #28a745;
+  border: 1px solid #28a745;
+}
+
+.license-status.invalid {
+  background: rgba(220, 53, 69, 0.2);
+  color: #dc3545;
+  border: 1px solid #dc3545;
+}
+
+/* Modal Tabs */
+.modal-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.tab-section {
+  background: #16213e;
+  border-radius: 8px;
+  padding: 20px;
+  border: 1px solid #0f3460;
+}
+
+.tab-section h3 {
+  color: #4cc9f0;
+  margin: 0 0 15px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+}
+
+/* Form Styles */
+.ammo-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.form-group label {
+  color: #ccc;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.form-group input,
+.form-group select {
+  background: #1a1a2e;
+  border: 1px solid #0f3460;
+  border-radius: 4px;
+  padding: 8px 12px;
+  color: #eee;
+  font-size: 14px;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: #4cc9f0;
+  box-shadow: 0 0 0 2px rgba(76, 201, 240, 0.2);
+}
+
+.add-ammo-btn {
+  background: #4cc9f0;
+  border: none;
+  color: #1a1a2e;
+  padding: 12px 20px;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.add-ammo-btn:hover {
+  background: #39b5d6;
+}
+
+.add-ammo-btn:disabled {
+  background: #555;
+  cursor: not-allowed;
+}
+
+/* Lists */
+.purchases-list,
+.violations-list,
+.shots-list,
+.guns-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.purchase-item,
+.violation-item,
+.shot-item,
+.gun-item {
+  background: #1a1a2e;
+  border: 1px solid #0f3460;
+  border-radius: 6px;
+  padding: 12px;
+}
+
+.purchase-header,
+.violation-header,
+.gun-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.ammo-type-badge {
+  background: #4cc9f0;
+  color: #1a1a2e;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.purchase-date,
+.violation-date {
+  color: #888;
+  font-size: 12px;
+}
+
+.purchase-details {
+  color: #ccc;
+  font-size: 14px;
+}
+
+.purchase-details .depleted {
+  color: #dc3545;
+  font-weight: bold;
+}
+
+.purchase-details .available {
+  color: #28a745;
+  font-weight: bold;
+}
+
+.violation-type {
+  color: #ff6b6b;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.violation-description {
+  color: #ccc;
+  font-size: 14px;
+}
+
+.shot-item {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+  align-items: center;
+}
+
+.shot-time {
+  color: #4cc9f0;
+  font-weight: bold;
+}
+
+.shot-location {
+  color: #ccc;
+  font-family: monospace;
+}
+
+.shot-weapon {
+  color: #aaa;
+}
+
+.gun-name {
+  color: #4cc9f0;
+  font-weight: bold;
+}
+
+.status-badge {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.status-badge.active {
+  background: #28a745;
+  color: white;
+}
+
+.status-badge.maintenance {
+  background: #ffc107;
+  color: #1a1a2e;
+}
+
+.status-badge.inactive {
+  background: #6c757d;
+  color: white;
+}
+
+.gun-details {
+  color: #aaa;
+  font-size: 12px;
+  display: flex;
+  gap: 15px;
+}
+
+.no-data {
+  text-align: center;
+  color: #888;
+  padding: 20px;
+  font-style: italic;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .hunter-modal {
+    width: 95%;
+    margin: 10px;
+  }
+  
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .overview-stats {
+    grid-template-columns: 1fr;
+  }
+  
+  .shot-item {
+    grid-template-columns: 1fr;
+    gap: 5px;
+  }
+  
+  .gun-details {
+    flex-direction: column;
+    gap: 5px;
   }
 }

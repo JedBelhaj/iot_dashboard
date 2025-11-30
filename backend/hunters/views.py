@@ -202,6 +202,16 @@ class GunViewSet(viewsets.ModelViewSet):
     queryset = Gun.objects.all()
     serializer_class = GunSerializer
     
+    def get_queryset(self):
+        """
+        Filter guns by owner if provided
+        """
+        queryset = Gun.objects.all().order_by('-created_at')
+        owner_id = self.request.query_params.get('owner', None)
+        if owner_id is not None:
+            queryset = queryset.filter(owner_id=owner_id)
+        return queryset
+    
     @extend_schema(
         summary="Record Shot from Gun",
         description="Record a new shot fired by this specific gun with IoT sensor data.",
@@ -292,6 +302,16 @@ class ShotViewSet(viewsets.ModelViewSet):
     """
     queryset = Shot.objects.all()
     serializer_class = ShotSerializer
+    
+    def get_queryset(self):
+        """
+        Filter shots by hunter if provided
+        """
+        queryset = Shot.objects.all().order_by('-timestamp')
+        hunter_id = self.request.query_params.get('hunter', None)
+        if hunter_id is not None:
+            queryset = queryset.filter(hunter_id=hunter_id)
+        return queryset
     
     @action(detail=False, methods=['get'])
     def recent(self, request):

@@ -13,6 +13,7 @@ urlpatterns = [
     path('api/sensors/', include('sensors.urls')),
     path('api/ammunition/', include('ammunition.urls')),
     path('api/activities/', include('activities.urls')),
+    path('api/compliance/', include('compliance.urls')),
     path('api/', include('iot_dashboard.api_urls')),
     
     # OpenAPI/Swagger documentation
